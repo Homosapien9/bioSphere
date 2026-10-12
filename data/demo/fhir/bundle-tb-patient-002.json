@@ -1,0 +1,223 @@
+{
+ "resourceType": "Bundle",
+ "id": "bundle-tb-patient-002",
+ "type": "collection",
+ "timestamp": "2026-07-01",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:tb-patient-002",
+   "resource": {
+    "resourceType": "Patient",
+    "id": "tb-patient-002",
+    "gender": "male",
+    "birthDate": "1979-02-11"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-bmi",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-002-obs-bmi",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index (BMI) [Ratio]"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 24.8,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-sysbp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-002-obs-sysbp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8480-6",
+       "display": "Systolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 116.8,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-diabp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-002-obs-diabp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8462-4",
+       "display": "Diastolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 83.8,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-resthr",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-002-obs-resthr",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 69.0,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-cond-0",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-002-cond-0",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "I10",
+       "display": "Essential (primary) hypertension"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "onsetDateTime": "2023-07-02"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-002-med-0",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "tb-patient-002-med-0",
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "29046",
+       "display": "Lisinopril (ingredient) oral"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-002"
+    },
+    "authoredOn": "2026-06-01"
+   }
+  }
+ ]
+}

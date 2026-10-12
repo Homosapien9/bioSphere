@@ -1,0 +1,281 @@
+{
+ "resourceType": "Bundle",
+ "id": "bundle-tb-patient-022",
+ "type": "collection",
+ "timestamp": "2026-07-01",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:tb-patient-022",
+   "resource": {
+    "resourceType": "Patient",
+    "id": "tb-patient-022",
+    "gender": "male",
+    "birthDate": "1995-04-13"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-bmi",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-022-obs-bmi",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index (BMI) [Ratio]"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 29.7,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-sysbp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-022-obs-sysbp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8480-6",
+       "display": "Systolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 126.9,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-diabp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-022-obs-diabp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8462-4",
+       "display": "Diastolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 78.5,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-resthr",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-022-obs-resthr",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 58.0,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-cond-0",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-022-cond-0",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "I10",
+       "display": "Essential (primary) hypertension"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "onsetDateTime": "2021-07-02"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-cond-1",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-022-cond-1",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "K21.9",
+       "display": "Gastro-esophageal reflux disease without esophagitis"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "onsetDateTime": "2020-07-02"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-med-0",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "tb-patient-022-med-0",
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "29046",
+       "display": "Lisinopril (ingredient) oral"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "authoredOn": "2026-06-01"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-022-med-1",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "tb-patient-022-med-1",
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "7626",
+       "display": "Omeprazole (ingredient) oral"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-022"
+    },
+    "authoredOn": "2026-06-01"
+   }
+  }
+ ]
+}

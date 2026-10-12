@@ -1,0 +1,295 @@
+{
+ "resourceType": "Bundle",
+ "id": "bundle-tb-patient-008",
+ "type": "collection",
+ "timestamp": "2026-07-01",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:tb-patient-008",
+   "resource": {
+    "resourceType": "Patient",
+    "id": "tb-patient-008",
+    "gender": "male",
+    "birthDate": "1983-08-17"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-bmi",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-008-obs-bmi",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index (BMI) [Ratio]"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 28.6,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-sysbp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-008-obs-sysbp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8480-6",
+       "display": "Systolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 129.0,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-diabp",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-008-obs-diabp",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8462-4",
+       "display": "Diastolic blood pressure"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 80.2,
+     "unit": "mm[Hg]",
+     "system": "http://unitsofmeasure.org",
+     "code": "mm[Hg]"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-resthr",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "tb-patient-008-obs-resthr",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "effectiveDateTime": "2026-06-01",
+    "valueQuantity": {
+     "value": 62.0,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-cond-0",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-008-cond-0",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "M17.0",
+       "display": "Unilateral primary osteoarthritis, knee"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "onsetDateTime": "2017-07-03"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-cond-1",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-008-cond-1",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "E55.9",
+       "display": "Vitamin D deficiency, unspecified"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "onsetDateTime": "2016-07-03"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-cond-2",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "tb-patient-008-cond-2",
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/icd-10-cm",
+       "code": "M54.50",
+       "display": "Low back pain, unspecified"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "onsetDateTime": "2024-07-01"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:tb-patient-008-med-0",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "tb-patient-008-med-0",
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "11256",
+       "display": "Cholecalciferol (ingredient) oral"
+      }
+     ]
+    },
+    "subject": {
+     "reference": "Patient/tb-patient-008"
+    },
+    "authoredOn": "2026-06-01"
+   }
+  }
+ ]
+}

@@ -1,0 +1,219 @@
+{
+  "data": {
+    "dir": "data/demo",
+    "synthetic": true,
+    "n_usable_rows": 1946,
+    "n_patients": 24,
+    "n_train_rows": 1145,
+    "n_test_rows": 393,
+    "n_train_patients": 19,
+    "n_test_patients": 19,
+    "test_fraction": 0.25,
+    "heldout_modulus": 5
+  },
+  "models": {
+    "persistence": {
+      "kind": "persistence",
+      "config": "baseline",
+      "chronological": {
+        "n": 393,
+        "mae": 0.6972,
+        "rmse": 0.9597
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.6593,
+        "rmse": 0.9354,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.6702
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.7685
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 0.9321,
+        "q025": -2.0,
+        "q975": 2.0,
+        "mae": 0.6428,
+        "bias": -0.0105
+      }
+    },
+    "personal_mean": {
+      "kind": "personal_mean",
+      "config": "baseline",
+      "chronological": {
+        "n": 393,
+        "mae": 0.7507,
+        "rmse": 0.9259
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.7057,
+        "rmse": 0.8936,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.7477
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.7586
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 0.8888,
+        "q025": -1.5736,
+        "q975": 1.8529,
+        "mae": 0.7038,
+        "bias": -0.0163
+      }
+    },
+    "ridge_wearable_only": {
+      "kind": "ridge",
+      "config": "wearable_only",
+      "chronological": {
+        "n": 393,
+        "mae": 0.8059,
+        "rmse": 0.998
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.7299,
+        "rmse": 0.9238,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.776
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.8849
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 1.0193,
+        "q025": -1.9117,
+        "q975": 1.9471,
+        "mae": 0.8319,
+        "bias": -0.0
+      }
+    },
+    "ridge_with_baseline": {
+      "kind": "ridge",
+      "config": "with_baseline",
+      "chronological": {
+        "n": 393,
+        "mae": 0.6442,
+        "rmse": 0.8162
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.6339,
+        "rmse": 0.7937,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.6274
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.6888
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 0.7801,
+        "q025": -1.4036,
+        "q975": 1.6579,
+        "mae": 0.622,
+        "bias": 0.0008
+      }
+    },
+    "ridge_with_clinical": {
+      "kind": "ridge",
+      "config": "with_clinical",
+      "chronological": {
+        "n": 393,
+        "mae": 0.6499,
+        "rmse": 0.8201
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.8453,
+        "rmse": 1.0527,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.6358
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.687
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 0.7639,
+        "q025": -1.361,
+        "q975": 1.6244,
+        "mae": 0.6066,
+        "bias": 0.0018
+      }
+    },
+    "hgbr_with_clinical": {
+      "kind": "hgbr",
+      "config": "with_clinical",
+      "chronological": {
+        "n": 393,
+        "mae": 0.689,
+        "rmse": 0.8758
+      },
+      "heldout_patients": {
+        "n": 408,
+        "mae": 0.6909,
+        "rmse": 0.8652,
+        "n_patients": 5
+      },
+      "missing_subsets": {
+        "complete_last_night": {
+          "n": 285,
+          "mae": 0.6847
+        },
+        "incomplete_last_night": {
+          "n": 108,
+          "mae": 0.7003
+        }
+      },
+      "train_residual_stats": {
+        "n": 1145,
+        "std": 0.1813,
+        "q025": -0.3441,
+        "q975": 0.3626,
+        "mae": 0.1403,
+        "bias": 0.0005
+      }
+    }
+  },
+  "hgbr_adoption": {
+    "hgbr_test_mae": 0.689,
+    "ridge_test_mae": 0.6499,
+    "adopted": false
+  }
+}
