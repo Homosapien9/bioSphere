@@ -4,7 +4,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
 import config
 from src import evaluation as EV
 from src.features import usable_for_training
