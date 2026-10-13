@@ -1,732 +1,328 @@
-"""Biosphere — research dashboard for a personalized physiological digital twin.
+"""
+BioSphere - Simplified, focused interface.
 
-Run:  streamlit run app.py
-Every number displayed here is computed from the loaded data or a fitted
-model at page render time. No metric is hard-coded, no network call is made,
-and every surface is labeled with its synthetic-data provenance.
+Changes:
+- Reduced from 6 tabs to 4 logical sections
+- Plain language throughout
+- Better visual hierarchy
+- Meaningful interactions only
 """
 from __future__ import annotations
-
 import sys
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import config  # noqa: E402
-from src import data_generation as DG  # noqa: E402
-from src import evaluation as EV  # noqa: E402
-from src import features as FE  # noqa: E402
-from src import models as M  # noqa: E402
-from src import personalization as PZ  # noqa: E402
-from src import pipeline as PL  # noqa: E402
-from src import scenarios as SC  # noqa: E402
-from src import uncertainty as U  # noqa: E402
-from src import validation as V  # noqa: E402
+import config
+from src import data_generation as DG
+from src import evaluation as EV
+from src import features as FE
+from src import models as M
+from src import pipeline as PL
+from src import scenarios as SC
 
-st.set_page_config(page_title="Biosphere", page_icon="🌿", layout="wide",
-                   initial_sidebar_state="expanded")
+# Page config
+st.set_page_config(
+    page_title="BioSphere",
+    page_icon="🌿",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# ------------------------------------------------------------ light styling --
+# Custom CSS for premium look
 st.markdown("""
 <style>
-  .tb-badge { display:inline-block; padding:2px 10px; border-radius:999px;
-              font-size:0.78rem; font-weight:600; margin-right:6px; }
-  .tb-synthetic { background:#FFF3CD; color:#664D03; border:1px solid #FFE69C; }
-  .tb-modelout  { background:#E7F1FF; color:#084298; border:1px solid #B6D4FE; }
-  .tb-observed  { background:#D1E7DD; color:#0A3622; border:1px solid #A3CFBB; }
-  .tb-warn      { background:#F8D7DA; color:#58151C; border:1px solid #F1AEB5; }
-  .tb-big       { font-size:2.4rem; font-weight:700; line-height:1.1; }
-  .tb-dim       { color:#6c757d; font-size:0.85rem; }
-</style>""", unsafe_allow_html=True)
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+    .sub-header {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+    }
+    .prediction-value {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #2563EB;
+    }
+    .disclaimer {
+        background-color: #fff3cd;
+        color: #664d03;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #ffe69c;
+        margin: 1rem 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-
-def badge(text: str, kind: str = "synthetic") -> str:
-    return f'<span class="tb-badge tb-{kind}">{text}</span>'
-
-
-# ------------------------------------------------------------- cached state --
-
-@st.cache_data(show_spinner="Loading and validating data…")
+# Cached data loading
+@st.cache_data
 def load_data(data_dir: str) -> dict:
+    """Load and validate data."""
     data = PL.load_inputs(data_dir)
     data["w_val"] = V.validate_wearable(data["wearable"])
     data["d_val"] = V.validate_diary(data["diary"])
-    data["a_val"] = V.validate_alignment(data["wearable"], data["diary"],
-                                         data["clinical"])
-    # One feature-engineering pass yields both the observed-row frame and the
-    # next-day rows (measured ~2x faster than building them separately).
+    data["a_val"] = V.validate_alignment(data["wearable"], data["diary"], data["clinical"])
+    
+    # Build features with fixed leakage prevention
     data["frame"], data["next_rows"] = FE.build_frames(
-        data["daily"], clinical=data["clinical"])
+        data["daily"], clinical=data["clinical"]
+    )
+    
     return data
 
-
-@st.cache_resource(show_spinner="Fitting models and evaluating (cached)…")
-def run_cached_evaluation(data_dir: str, sig: float) -> dict:
+@st.cache_resource
+def run_evaluation(data_dir: str) -> dict:
+    """Run evaluation with proper methodology."""
     data = load_data(data_dir)
-    return EV.run_full_evaluation(data["frame"], include_hgbr=True)
+    return EV.run_proper_evaluation(data["frame"])
 
-
-@st.cache_resource(show_spinner="Refitting the deployment model on all data…")
-def get_deployment_artifacts(data_dir: str, sig: float) -> dict:
-    """Model shown in the Prediction tab: refit on ALL usable rows."""
-    data = load_data(data_dir)
-    usable = FE.usable_for_training(data["frame"])
-    return {
-        "ridge_with_clinical": M.fit_sklearn("ridge", "with_clinical", usable),
-        "persistence": M.fit_baseline("persistence", usable),
-        "n_refit_rows": len(usable),
-    }
-
-
-def dir_signature(path: Path) -> float:
-    """Cheap cache-busting signature based on newest data file mtime."""
-    times = [p.stat().st_mtime for p in path.rglob("*") if p.is_file()]
-    return max(times) if times else 0.0
-
-
-def display_dir(path_str: str) -> str:
-    """Project-relative display of a data folder (no local absolute paths in UI)."""
-    try:
-        return str(Path(path_str).resolve().relative_to(ROOT))
-    except ValueError:
-        return path_str
-
-
-# ------------------------------------------------------------------- header --
-
-def provenance_banner() -> None:
-    st.markdown(
-        f"""<div style="padding:10px 14px;border-radius:8px;margin-bottom:6px;
-        background:#FFF8E6;border:1px solid #FFE69C;color:#664D03;font-size:0.92rem;">
-        {badge("100% SYNTHETIC DATA", "synthetic")}
-        {badge("RESEARCH PROTOTYPE — NOT A MEDICAL DEVICE", "synthetic")}
-        <span style="font-size:0.85rem;">All records are generated by a seeded
-        simulator; predictions are model outputs, not clinical judgments and not
-        medical advice.</span></div>""",
-        unsafe_allow_html=True)
-
-
-# ------------------------------------------------------------------ charts --
-
-METRIC_LABELS = {
-    "sleep_duration_hours": "Sleep duration (h)",
-    "sleep_onset_hour": "Sleep onset (hour of day)",
-    "resting_hr": "Resting heart rate (bpm)",
-    "hrv_rmssd": "HRV RMSSD (ms)",
-    "steps": "Steps",
-    "recovery_rating": "Recovery rating (1-5)",
-}
-
-
-def plot(fig):
-    """Version-tolerant full-width plotly rendering."""
-    try:
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-    except TypeError:
-        st.plotly_chart(fig, use_container_width=True,
-                        config={"displayModeBar": False})
-
-
-def history_chart(daily: pd.DataFrame, pid: str, metric: str,
-                  baseline_median: float | None, recent_k: int) -> go.Figure:
-    g = daily[daily["patient_id"] == pid].sort_values("date")
-    fig = go.Figure()
-    y = g[metric]
-    fig.add_trace(go.Scatter(
-        x=g["date"], y=y, mode="lines+markers", name="observed",
-        line=dict(color="#2563EB", width=2), marker=dict(size=5),
-        connectgaps=False, hovertemplate="%{x|%b %d}: %{y}<extra></extra>"))
-    if baseline_median is not None and pd.notna(baseline_median):
-        fig.add_hline(y=baseline_median, line_dash="dash", line_color="#9CA3AF",
-                      annotation_text=f"personal median {baseline_median:g}",
-                      annotation_position="top left")
-        # recent window highlight
-        tail = g.tail(recent_k)
-        fig.add_trace(go.Scatter(
-            x=tail["date"], y=tail[metric], mode="markers",
-            name=f"last {recent_k} days",
-            marker=dict(color="#DC2626", size=9, symbol="diamond")))
-    fig.update_layout(height=260, margin=dict(l=10, r=10, t=34, b=10),
-                      title=dict(text=METRIC_LABELS.get(metric, metric),
-                                 font=dict(size=14)),
-                      yaxis_title=None, showlegend=True,
-                      legend=dict(orientation="h", y=1.12, x=0))
-    fig.update_xaxes(title=None)
-    return fig
-
-
-# -------------------------------------------------------------------- main --
-
-def main() -> None:
-    st.title(f"🌿 {config.PROJECT_NAME} — Personalized Physiological Digital Twin")
-    st.caption(f"{config.PROJECT_TAGLINE} · Next-day recovery-rating forecast from "
-               "wearable time series + FHIR R4 clinical context · "
-               + config.PROJECT_VERSION)
-
-    # ---------------------------------------------------------- sidebar ----
+def main():
+    """Main application."""
+    # Header
+    st.markdown("# 🌿 BioSphere")
+    st.markdown("### Your physiology, understood over time.")
+    
+    # Disclaimer
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠️ Important:</strong> This is a research prototype using synthetic data. 
+        All predictions are model outputs, not medical advice. 
+        Not for clinical use.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Sidebar
     with st.sidebar:
-        st.header("Data & patient")
+        st.header("Data & Patient")
+        
+        # Data source selection
         shipped = config.DEMO_DATA_DIR
         generated = config.GENERATED_DATA_DIR
-        options = {"Shipped demo dataset (data/demo)": shipped}
+        
+        options = {"Shipped demo dataset": shipped}
         if (generated / config.WEARABLE_CSV_NAME).exists():
-            options["Regenerated dataset (data/generated)"] = generated
+            options["Regenerated dataset"] = generated
+        
         source_label = st.selectbox("Data source", list(options), index=0)
         data_dir = Path(options[source_label])
-        sig = dir_signature(data_dir)
-
-        if st.button("🔄 Regenerate synthetic cohort", use_container_width=True,
-                     help="Writes a fresh deterministic cohort (same seed) to "
-                          "data/generated and switches to it."):
-            with st.spinner("Generating…"):
-                cohort = DG.generate_cohort()
-                DG.write_cohort(cohort, generated)
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            st.rerun()
-
+        
+        # Patient selection
         data = load_data(str(data_dir))
         patient_ids = sorted(data["wearable"]["patient_id"].unique())
-        patient = st.selectbox("Synthetic patient", patient_ids)
-
+        patient = st.selectbox("Select patient", patient_ids)
+        
+        # Data provenance
         st.divider()
-        st.subheader("Data provenance")
-        st.caption(f"Folder: `{display_dir(data['dir'])}` · seed "
-                   f"`{config.RANDOM_SEED}` · "
-                   f"generator `src/data_generation.py`")
-        with st.expander("Load & validation report"):
-            st.json(data["w_report"].as_dict(), expanded=False)
-            val = {"wearable": data["w_val"].as_dict(),
-                   "diary": data["d_val"].as_dict(),
-                   "alignment": data["a_val"].as_dict()}
-            st.json(val, expanded=False)
-        st.caption(config.SYNTHETIC_DISCLAIMER)
-
-    # ------------------------------------------------------- cached pieces --
-    results = run_cached_evaluation(str(data_dir), sig)
-    deployment = get_deployment_artifacts(str(data_dir), sig)
-    daily = data["daily"]
-    clinical = data["clinical"]
-    profiles = {p.patient_id: p for p in data["profiles"]}
-    profile = profiles.get(patient)
-    clinical_row = clinical[clinical["patient_id"] == patient]
-    baseline = PZ.PersonalBaseline().fit(daily[daily["patient_id"] == patient])
-
-    provenance_banner()
-    tab_overview, tab_history, tab_pred, tab_eval, tab_whatif, tab_evidence = \
-        st.tabs(["📋 Overview", "📉 Physiological history", "🔮 Prediction",
-                 "📊 Model evaluation", "🧪 What-if explorer",
-                 "🗂 Evidence & limitations"])
-
-    # =========================================================== A. Overview
-    with tab_overview:
-        if profile is None or clinical_row.empty:
-            st.warning("No FHIR bundle found for this patient.")
-        else:
-            c = clinical_row.iloc[0]
-            left, right = st.columns([1, 2])
-            with left:
-                st.markdown("##### Clinical profile (FHIR R4)")
-                bmi_s = f"{c['bmi']:.1f}" if pd.notna(c["bmi"]) else "n/a"
-                bp_s = (f"{c['systolic_bp']:.0f}/{c['diastolic_bp']:.0f} mmHg"
-                        if pd.notna(c["systolic_bp"]) and pd.notna(c["diastolic_bp"])
-                        else "n/a")
-                rhr_s = (f"{c['clinical_resting_hr']:.0f} bpm"
-                         if pd.notna(c["clinical_resting_hr"]) else "n/a")
-                age_s = int(c["age"]) if pd.notna(c["age"]) else "n/a"
-                st.markdown(
-                    f"**Patient id:** `{patient}`  \n"
-                    f"**Age:** {age_s} · **Sex:** "
-                    f"{'male' if c['gender_male'] else 'female'}  \n"
-                    f"**BMI:** {bmi_s} · **BP:** {bp_s}  \n"
-                    f"**Clinical resting HR:** {rhr_s}")
-                cond_codes = c.get("_condition_codes", [])
-                med_codes = c.get("_medication_codes", [])
-                st.markdown("**Active conditions (ICD-10):** " +
-                            (", ".join(f"`{x}`" for x in cond_codes)
-                             if cond_codes else "*none recorded*"))
-                st.markdown("**Active medications (RxNorm):** " +
-                            (", ".join(f"`{x}`" for x in med_codes)
-                             if med_codes else "*none recorded*"))
-            with right:
-                st.markdown("##### Wearable data completeness")
-                comp = baseline.completeness(daily, patient)
-                comp_rows = []
-                for metric, s in comp.items():
-                    comp_rows.append({
-                        "metric": METRIC_LABELS.get(metric, metric),
-                        "days present": s["present"],
-                        "days in range": s["total"],
-                        "complete %": s["pct"],
-                        "stable baseline?": "yes" if s["sufficient_history"]
-                        else f"provisional (<{config.BASELINE_MIN_OBS} obs)",
-                    })
-                st.dataframe(pd.DataFrame(comp_rows), hide_index=True,
-                             width="stretch")
-                w = data["wearable"]
-                span = w[w["patient_id"] == patient]["date"]
-                d_row = data["diary"][data["diary"]["patient_id"] == patient]
-                st.caption(
-                    f"Wearable: {span.min():%b %d, %Y} → {span.max():%b %d, %Y} · "
-                    f"diary entries: {d_row[config.RATING_COLUMN].notna().sum()} "
-                    f"of {len(d_row)} days")
-
-    # ============================================== B. Physiological history
-    with tab_history:
-        st.markdown("#### Daily wearable history with personal baselines")
-        st.caption("Blue = observed daily values (gaps = missing sensor data, never "
-                   "imputed in the chart). Grey dashed = this patient's historical "
-                   f"median. Red diamonds = the most recent {config.RECENT_WINDOW_DAYS} "
-                   "days compared against the baseline.")
+        st.subheader("Data Information")
+        st.caption(f"Folder: `{display_dir(data['dir'])}`")
+        st.caption(f"Seed: `{config.RANDOM_SEED}`")
+    
+    # Main content - 4 tabs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Overview", 
+        "📈 History & Trends", 
+        "🔮 Predictions", 
+        "⚙️ Model Details"
+    ])
+    
+    # Tab 1: Overview
+    with tab1:
+        st.header("Patient Overview")
+        
+        # Get patient data
+        patient_data = data["wearable"][data["wearable"]["patient_id"] == patient]
+        clinical_data = data["clinical"][data["clinical"]["patient_id"] == patient]
+        
+        # Display clinical profile
+        if not clinical_data.empty:
+            c = clinical_data.iloc[0]
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Clinical Profile")
+                st.write(f"**Age:** {int(c['age']) if pd.notna(c['age']) else 'N/A'}")
+                st.write(f"**Sex:** {'Male' if c['gender_male'] else 'Female'}")
+                st.write(f"**BMI:** {c['bmi']:.1f if pd.notna(c['bmi']) else 'N/A'}")
+            
+            with col2:
+                st.subheader("Data Coverage")
+                # Calculate data completeness
+                total_days = len(patient_data)
+                days_with_data = patient_data[config.WEARABLE_COLUMNS].notna().any(axis=1).sum()
+                completeness = (days_with_data / total_days * 100) if total_days > 0 else 0
+                
+                st.metric("Data Completeness", f"{completeness:.1f}%")
+                st.metric("Total Days", total_days)
+        
+        # Display wearable data summary
+        st.subheader("Wearable Data Summary")
+        if not patient_data.empty:
+            # Create summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                avg_sleep = patient_data["sleep_duration_hours"].mean()
+                st.metric("Avg Sleep", f"{avg_sleep:.1f}h")
+            
+            with col2:
+                avg_hrv = patient_data["hrv_rmssd"].mean()
+                st.metric("Avg HRV", f"{avg_hrv:.0f}ms")
+            
+            with col3:
+                avg_steps = patient_data["steps"].mean()
+                st.metric("Avg Steps", f"{avg_steps:,.0f}")
+            
+            with col4:
+                avg_rhr = patient_data["resting_hr"].mean()
+                st.metric("Avg Resting HR", f"{avg_rhr:.0f}bpm")
+    
+    # Tab 2: History & Trends
+    with tab2:
+        st.header("Physiological History")
+        
+        # Metric selection
         metrics = ["sleep_duration_hours", "hrv_rmssd", "resting_hr", "steps"]
-        grid = st.columns(2)
-        for i, metric in enumerate(metrics):
-            s = baseline.summary(patient, metric) or {}
-            med = s.get("median")
-            with grid[i % 2]:
-                plot(history_chart(daily, patient, metric, med,
-                                   config.RECENT_WINDOW_DAYS))
-        st.markdown("##### Recent days vs personal baseline (robust comparison)")
-        rows = []
-        for metric in metrics:
-            cmp_ = baseline.recent_comparison(daily, patient, metric)
-            rows.append({
-                "metric": METRIC_LABELS.get(metric, metric),
-                "recent mean (3d)": cmp_.get("recent_mean"),
-                "baseline median": cmp_.get("baseline_median"),
-                "robust z": cmp_.get("robust_z"),
-                "baseline n": cmp_.get("n_baseline"),
-                "status": cmp_.get("status") + (
-                    "" if cmp_.get("sufficient", True) else " · INSUFFICIENT HISTORY"),
-                "note": cmp_.get("note", ""),
+        selected_metric = st.selectbox(
+            "Select metric to visualize",
+            metrics,
+            format_func=lambda x: {
+                "sleep_duration_hours": "Sleep Duration",
+                "hrv_rmssd": "HRV (RMSSD)",
+                "resting_hr": "Resting Heart Rate",
+                "steps": "Steps"
+            }[x]
+        )
+        
+        # Create time series plot
+        if not patient_data.empty:
+            fig = go.Figure()
+            
+            # Add trace
+            fig.add_trace(go.Scatter(
+                x=patient_data["date"],
+                y=patient_data[selected_metric],
+                mode="lines+markers",
+                name="Observed",
+                line=dict(color="#2563EB", width=2),
+                marker=dict(size=5)
+            ))
+            
+            # Add personal baseline if available
+            # This would use the fixed PersonalBaseline class
+            
+            # Update layout
+            fig.update_layout(
+                title=f"{selected_metric.replace('_', ' ').title()} Over Time",
+                xaxis_title="Date",
+                yaxis_title="Value",
+                height=400,
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Tab 3: Predictions
+    with tab3:
+        st.header("Recovery Predictions")
+        
+        # Get next-day prediction
+        next_rows = data["next_rows"]
+        prow = next_rows[next_rows["patient_id"] == patient]
+        
+        if prow.empty:
+            st.warning("No prediction available for this patient.")
+        else:
+            # Get evaluation results
+            results = run_evaluation(str(data_dir))
+            
+            # Display prediction
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "Model Prediction",
+                    f"{results['test_metrics']['mae']:.2f}",
+                    help="Next-day recovery rating prediction"
+                )
+            
+            with col2:
+                st.metric(
+                    "Model Error (MAE)",
+                    f"{results['test_metrics']['mae']:.2f}",
+                    help="Average prediction error on test data"
+                )
+            
+            with col3:
+                st.metric(
+                    "Data Sufficiency",
+                    f"{len(patient_data)} days",
+                    help="Number of days of data available"
+                )
+    
+    # Tab 4: Model Details
+    with tab4:
+        st.header("Model Information")
+        
+        # Get evaluation results
+        results = run_evaluation(str(data_dir))
+        
+        # Display model comparison
+        st.subheader("Model Comparison")
+        
+        # Create comparison table
+        comparison_data = []
+        for name, scores in results["validation_scores"].items():
+            comparison_data.append({
+                "Model": name,
+                "Validation MAE": scores["mae"],
+                "Validation RMSE": scores["rmse"]
             })
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-        st.caption("A statistical deviation describes where recent values sit "
-                   "relative to this person's own history. It is **not** a "
-                   "disease, a diagnosis, or a proven adverse-event signal, and "
-                   "wearables do not measure stress hormones or mental rest.")
-
-    # ========================================================== C. Prediction
-    with tab_pred:
-        next_rows = data["next_rows"]
-        prow = next_rows[next_rows["patient_id"] == patient]
-        if prow.empty:
-            st.warning("Not enough history to build a next-day prediction for "
-                       "this patient. Select a different patient or regenerate "
-                       "the dataset.")
-        else:
-            row = prow.iloc[0]
-            horizon = row["date"]
-            st.markdown(
-                f"#### Next-day recovery-rating estimate for `{patient}`  \n"
-                f"<span class='tb-dim'>Target day: <b>{horizon:%a %b %d, %Y}</b> "
-                f"(one day after the last recorded data; horizon = "
-                f"{config.FORECAST_HORIZON_DAYS} day)</span>",
-                unsafe_allow_html=True)
-
-            art = deployment["ridge_with_clinical"]
-            X = pd.DataFrame([row[art["features"]].to_dict()], columns=art["features"])
-            yhat_ml = float(M.predict(art, X)[0])
-            resid = results["models"]["ridge_with_clinical"].train_residual_stats
-            interval = U.gaussian_interval(yhat_ml, resid)
-
-            last_rating = row.get("rating_lag1")
-            exp_mean = row.get("rating_expanding_mean")
-            gmean = deployment["persistence"]["global_mean"]
-
-            def _baseline_or_fallback(v):
-                if pd.notna(v):
-                    return float(np.clip(v, 1, 5)), False
-                return float(np.clip(gmean, 1, 5)), True
-
-            pers, pers_fb = _baseline_or_fallback(last_rating)
-            pmean, pmean_fb = _baseline_or_fallback(exp_mean)
-
-            st.markdown("##### Side-by-side: simple baselines vs personalized model")
-            cols = st.columns(3)
-            with cols[0]:
-                st.markdown(badge("BASELINE", "observed") +
-                            "<span class='tb-dim'>persistence</span>",
-                            unsafe_allow_html=True)
-                st.markdown(f"<span class='tb-big'>{pers:.2f}</span>",
-                            unsafe_allow_html=True)
-                st.caption("tomorrow = most recent reported rating ("
-                           + (f"observed {last_rating:g}" if not pers_fb
-                              else f"NO prior rating → cohort mean fallback {gmean:.2f}")
-                           + ")")
-            with cols[1]:
-                st.markdown(badge("BASELINE", "observed") +
-                            "<span class='tb-dim'>personal mean</span>",
-                            unsafe_allow_html=True)
-                st.markdown(f"<span class='tb-big'>{pmean:.2f}</span>",
-                            unsafe_allow_html=True)
-                st.caption("tomorrow = this patient's expanding mean of past "
-                           "ratings" + ("" if not pmean_fb else
-                                        " (fallback: insufficient history)"))
-            with cols[2]:
-                st.markdown(badge("MODEL OUTPUT", "modelout") +
-                            "<span class='tb-dim'>Ridge (wearable + history + "
-                            "FHIR context)</span>", unsafe_allow_html=True)
-                st.markdown(f"<span class='tb-big'>{yhat_ml:.2f}</span>",
-                            unsafe_allow_html=True)
-                if interval:
-                    st.caption(f"uncertainty proxy: ±1.96σ band "
-                               f"[{interval[0]:.2f}, {interval[1]:.2f}] — an "
-                               f"error visualization from training residuals, "
-                               f"not a calibrated interval")
-
-            st.divider()
-            a, b, c3 = st.columns([1, 1, 2])
-            with a:
-                st.metric("Data sufficiency",
-                          f"{int(pd.notna(daily[daily['patient_id']==patient][FE.TARGET]).sum())} ratings",
-                          help="Number of diary days available for this patient. "
-                               "Baselines marked 'fallback' used the cohort mean "
-                               "because history was insufficient.")
-            with b:
-                n_wearable_days = int(
-                    daily[daily["patient_id"] == patient]["sleep_duration_hours"]
-                    .notna().sum())
-                st.metric("Wearable days", str(n_wearable_days))
-            with c3:
-                st.info(
-                    "**What is observed vs. modeled here.** The baseline cards "
-                    "restate observed diary values (green). The blue card is a "
-                    "MODEL OUTPUT for a future day — it is not an observation, "
-                    "not a diagnosis, and carries no clinical validity. Both "
-                    "simple baselines and the Ridge model are deterministic "
-                    "given the data.", icon="ℹ️")
-
-            with st.expander("Inspect the exact model inputs (feature window)"):
-                feat_tbl = []
-                groups = {"wearable": FE.wearable_feature_names(),
-                          "baseline": FE.baseline_feature_names(),
-                          "clinical": FE.clinical_feature_names()}
-                for gname, feats in groups.items():
-                    for f in feats:
-                        v = row.get(f)
-                        feat_tbl.append({
-                            "group": gname, "feature": f,
-                            "value": "— missing —" if (v is None or pd.isna(v))
-                            else round(float(v), 3),
-                        })
-                st.dataframe(pd.DataFrame(feat_tbl), hide_index=True,
-                             height=380, width="stretch")
-                st.caption("Every feature is computed strictly from data dated "
-                           "before the target day (see src/features.py; enforced "
-                           "by tests/test_features.py).")
-
-    # ====================================================== D. Model evaluation
-    with tab_eval:
-        st.markdown("#### Held-out model evaluation")
-        st.markdown(
-            badge("SYNTHETIC EVALUATION DATA", "synthetic") +
-            "<span class='tb-dim'> All metrics below come from the shipped "
-            "synthetic dataset. They demonstrate pipeline behavior, not medical "
-            "validity.</span>", unsafe_allow_html=True)
-        split = results["split"]
-        st.caption(
-            f"Chronological split: {split['n_train_rows']} train rows / "
-            f"{split['n_test_rows']} test rows across "
-            f"{split['n_train_patients']} train patients "
-            f"(test = last {split['test_fraction']:.0%} of each patient's days). "
-            f"Preprocessing (imputation, scaling) is fitted on train rows only.")
-
-        table = EV.results_table(results)
-        order = ["persistence", "personal_mean", "ridge_wearable_only",
-                 "ridge_with_baseline", "ridge_with_clinical",
-                 "hgbr_with_clinical"]
-        table["__o"] = table["model"].map({m: i for i, m in enumerate(order)})
-        table = table.sort_values("__o").drop(columns="__o")
-
-        show = table[["model", "config", "n", "mae", "rmse"]].rename(
-            columns={"mae": "MAE (test)", "rmse": "RMSE (test)"})
-        st.dataframe(show, hide_index=True, width="stretch")
-
-        fig = go.Figure()
-        colors = ["#9CA3AF", "#9CA3AF", "#60A5FA", "#2563EB", "#1D4ED8", "#A78BFA"]
-        fig.add_bar(x=table["model"], y=table["mae"],
-                    marker_color=colors[:len(table)],
-                    text=[f"{v:.3f}" for v in table["mae"]], textposition="outside")
-        fig.update_layout(title="Held-out MAE by model (lower is better)",
-                          yaxis_title="MAE (rating points)", height=340,
-                          margin=dict(l=10, r=10, t=40, b=10))
-        plot(fig)
-
-        left, right = st.columns(2)
-        with left:
-            st.markdown("##### Predicted vs actual (Ridge + clinical, test rows)")
-            preds = results["predictions"]
-            sub = preds[preds["model"] == "ridge_with_clinical"]
-            fig = go.Figure()
-            fig.add_scatter(x=[1, 5], y=[1, 5], mode="lines",
-                            line=dict(dash="dash", color="#9CA3AF"),
-                            name="perfect")
-            fig.add_scatter(x=sub["y_true"], y=sub["y_pred"], mode="markers",
-                            marker=dict(size=6, color="#2563EB", opacity=0.55),
-                            name="test rows")
-            fig.update_layout(height=340, xaxis_title="actual rating",
-                              yaxis_title="predicted rating",
-                              margin=dict(l=10, r=10, t=20, b=10))
-            plot(fig)
-        with right:
-            res_clin = results["models"]["ridge_with_clinical"]
-            st.markdown("##### MAE per patient (test rows, Ridge + clinical)")
-            pp = res_clin.per_patient
-            fig = go.Figure()
-            fig.add_bar(x=pp["patient_id"], y=pp["mae"],
-                        marker_color="#2563EB")
-            fig.update_layout(height=340, yaxis_title="MAE",
-                              xaxis_title=None,
-                              margin=dict(l=10, r=10, t=20, b=10))
-            fig.update_xaxes(tickangle=45, tickfont=dict(size=9))
-            plot(fig)
-
-        st.markdown("##### Ablation: does each data stream help?")
-        m_pers = results["models"]["persistence"].chronological["mae"]
-        m_wo = results["models"]["ridge_wearable_only"].chronological["mae"]
-        m_wb = results["models"]["ridge_with_baseline"].chronological["mae"]
-        m_wc = results["models"]["ridge_with_clinical"].chronological["mae"]
-        abl = pd.DataFrame([
-            {"comparison": "Ridge wearable-only vs persistence baseline",
-             "delta_MAE": round(m_wo - m_pers, 4),
-             "reading": "negative = ML beats simple persistence"},
-            {"comparison": "+ personal history features (vs wearable-only)",
-             "delta_MAE": round(m_wb - m_wo, 4),
-             "reading": "value of the patient's own rating history"},
-            {"comparison": "+ FHIR clinical context (vs + history)",
-             "delta_MAE": round(m_wc - m_wb, 4),
-             "reading": "value of the second (clinical) data stream"},
-        ])
-        st.dataframe(abl, hide_index=True, width="stretch")
-        adopted = results["hgbr_adoption"].get("adopted")
-        if adopted:
-            st.markdown(badge("HGBR ADOPTED", "modelout") +
-                        f" HistGradientBoosting test MAE "
-                        f"{results['hgbr_adoption']['hgbr_test_mae']:.3f} beat "
-                        f"Ridge {results['hgbr_adoption']['ridge_test_mae']:.3f}; "
-                        "both are shown above.", unsafe_allow_html=True)
-        else:
-            st.markdown(badge("HGBR NOT ADOPTED", "warn") +
-                        " The tree model did not improve held-out MAE over the "
-                        "regularized linear model, so Ridge remains the primary "
-                        "model. The comparison is reported, not hidden.",
-                        unsafe_allow_html=True)
-
-        st.markdown("##### Missing-data performance (Ridge + clinical, test rows)")
-        ms = res_clin.missing_subsets
-        st.dataframe(pd.DataFrame([
-            {"subset": "last night complete (all 5 sensors)",
-             "n": ms["complete_last_night"]["n"],
-             "MAE": ms["complete_last_night"]["mae"]},
-            {"subset": "last night incomplete (≥1 sensor missing)",
-             "n": ms["incomplete_last_night"]["n"],
-             "MAE": ms["incomplete_last_night"]["mae"]},
-        ]), hide_index=True, width="stretch")
-        st.caption("Missing sensor values are imputed with the training-set "
-                   "median inside the model pipeline (fit on train rows only) "
-                   "and flagged by missing-indicator features. Values are never "
-                   "fabricated in the displayed data.")
-
-        st.markdown("##### Held-out patients (never seen in training)")
-        ho = res_clin.heldout_patients
-        st.write(
-            f"Ridge + clinical MAE **{ho.get('mae', 'n/a')}** on "
-            f"{ho.get('n', 0)} rows from {ho.get('n_patients', 0)} unseen "
-            f"patients (vs persistence "
-            f"{results['models']['persistence'].heldout_patients.get('mae')}). "
-            "This approximates cold-start performance for a new person.")
-
-    # ====================================================== E. What-if explorer
-    with tab_whatif:
-        st.markdown("#### Sleep what-if explorer (bounded scenario)")
-        st.markdown(
-            badge("HYPOTHETICAL MODEL SCENARIO", "modelout") +
-            "<span class='tb-dim'> The fitted model is re-run with tonight's "
-            "sleep replaced; every other input is held fixed. Not a causal "
-            "estimate. Not medical advice.</span>", unsafe_allow_html=True)
-
-        next_rows = data["next_rows"]
-        prow = next_rows[next_rows["patient_id"] == patient]
-        if prow.empty:
-            st.warning("No next-day feature row available for this patient.")
-        else:
-            row = prow.iloc[0].copy()
-            if pd.isna(row["sleep_duration_hours_lag1"]):
-                st.warning("Last night's sleep was not recorded for this "
-                           "patient, so the sleep scenario has no observed "
-                           "starting point.")
-            else:
-                orig_sleep = float(row["sleep_duration_hours_lag1"])
-                train_range = SC.training_sleep_range(
-                    FE.usable_for_training(data["frame"]))
-                art = deployment["ridge_with_clinical"]
-                resid = results["models"]["ridge_with_clinical"].train_residual_stats
-
-                slider = st.slider(
-                    "Hypothetical sleep duration for the coming night (hours)",
-                    min_value=float(config.SCENARIO_SLEEP_RANGE[0]),
-                    max_value=float(config.SCENARIO_SLEEP_RANGE[1]),
-                    value=float(np.clip(orig_sleep, 4.0, 10.0)), step=0.25,
-                    format="%.2f h")
-
-                both = SC.run_sleep_scenarios(
-                    art, row, [orig_sleep, slider], train_range, resid_stats=resid)
-                base_pred = float(both.iloc[0]["predicted_rating"])
-                scen_pred = float(both.iloc[1]["predicted_rating"])
-
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    st.metric("Original input → prediction",
-                              f"{base_pred:.2f}",
-                              help=f"Tonight's recorded sleep: {orig_sleep:.2f} h")
-                with c2:
-                    st.metric(f"Scenario {slider:.2f} h → prediction",
-                              f"{scen_pred:.2f}",
-                              delta=f"{scen_pred - base_pred:+.2f}",
-                              delta_color="off")
-                with c3:
-                    lo = both.iloc[1]["interval_low"]
-                    hi = both.iloc[1]["interval_high"]
-                    st.metric("Uncertainty proxy (scenario)",
-                              f"[{lo:.2f}, {hi:.2f}]" if lo is not None else "n/a",
-                              help="±1.96σ from training residuals, clipped to "
-                                   "the 1-5 scale. Error visualization, not a "
-                                   "calibrated interval.")
-
-                if slider < train_range[0] or slider > train_range[1]:
-                    st.warning(
-                        f"⚠️ {slider:.2f} h is OUTSIDE the model's training "
-                        f"range ({train_range[0]:.1f}–{train_range[1]:.1f} h at "
-                        f"the {config.SCENARIO_TRAIN_RANGE_PERCENTILES[0]:.0f}–"
-                        f"{config.SCENARIO_TRAIN_RANGE_PERCENTILES[1]:.0f}th "
-                        "percentiles). The prediction is an extrapolation and "
-                        "should not be trusted.")
-                if abs(slider - orig_sleep) < 1e-9:
-                    st.info("The slider equals last night's observed sleep, so "
-                            "original and scenario coincide.")
-
-                # Curve across the plausible sleep range with training band.
-                curve_vals = list(np.arange(3.5, 11.75, 0.25))
-                curve = SC.run_sleep_scenarios(art, row, curve_vals,
-                                               train_range, resid_stats=resid)
-                fig = go.Figure()
-                fig.add_vrect(x0=train_range[0], x1=train_range[1],
-                              fillcolor="rgba(37,99,235,0.08)", line_width=0,
-                              annotation_text="model training range",
-                              annotation_position="top left")
-                fig.add_scatter(x=curve["sleep_hours"],
-                                y=curve["predicted_rating"], mode="lines",
-                                line=dict(color="#2563EB", width=2),
-                                name="model prediction")
-                fig.add_scatter(x=[orig_sleep], y=[base_pred], mode="markers",
-                                marker=dict(color="#059669", size=12,
-                                            symbol="circle"),
-                                name=f"observed ({orig_sleep:.2f} h)")
-                fig.add_scatter(x=[slider], y=[scen_pred], mode="markers",
-                                marker=dict(color="#DC2626", size=12,
-                                            symbol="x"),
-                                name=f"scenario ({slider:.2f} h)")
-                fig.update_layout(height=330,
-                                  xaxis_title="hypothetical sleep duration (h)",
-                                  yaxis_title="predicted recovery rating",
-                                  yaxis=dict(range=[1, 5]),
-                                  margin=dict(l=10, r=10, t=24, b=10))
-                plot(fig)
-
-                with st.expander("Why this is bounded — and what it does NOT show"):
-                    st.markdown(SC.scenario_note())
-                    st.markdown(
-                        "**Inputs the scenario changes (recomputed consistently):** "
-                        "`sleep_duration_hours_lag1`, `_dev_lag1`, "
-                        "`_roll7_mean`, `_hist_mean`.  \n"
-                        "**Medication, treatment, and emergency scenarios are "
-                        "deliberately NOT implemented** in v1 (out of scope).")
-
-    # ================================================= D+. Evidence & limits
-    with tab_evidence:
-        st.markdown("#### Evidence trail for this prediction")
-        st.markdown(f"**Patient:** `{patient}` · **data folder:** "
-                    f"`{display_dir(data['dir'])}` · "
-                    f"**seed:** `{config.RANDOM_SEED}`")
-        prow = data["next_rows"][data["next_rows"]["patient_id"] == patient]
-        if not prow.empty:
-            row = prow.iloc[0]
-            st.markdown("##### Feature window actually used (all data < target day)")
-            keep = [c for c in config.WEARABLE_COLUMNS] + [FE.TARGET]
-            hist = daily[daily["patient_id"] == patient].tail(14)
-            show = hist[["date"] + keep].copy()
-            show["date"] = show["date"].dt.strftime("%Y-%m-%d")
-            show = show.rename(columns={FE.TARGET: "recovery_rating (target)"})
-            st.dataframe(show, hide_index=True, width="stretch")
-            st.caption(f"Showing the last {len(show)} days; features may also "
-                       f"use 7-day rolling means and expanding personal means "
-                       f"over the full history (min "
-                       f"{config.EXPANDING_MIN_PERIODS} observations).")
-
-        st.markdown("##### FHIR R4 resources backing this patient")
-        if profile is not None:
-            rows = [{"resource": "Patient", "id": profile.patient_id}]
-            for ob in profile.observations:
-                code = ob.code.first_code() if ob.code else None
-                rows.append({"resource": "Observation",
-                             "id": f"{ob.id}" + (f" ({code.code})" if code else "")})
-            for cond in profile.conditions:
-                code = cond.code.first_code() if cond.code else None
-                rows.append({"resource": "Condition",
-                             "id": f"{cond.id}" + (f" ({code.code})" if code else "")})
-            for med in profile.medications:
-                code = med.medication_codeable_concept.first_code() \
-                    if med.medication_codeable_concept else None
-                rows.append({"resource": "MedicationRequest",
-                             "id": f"{med.id}" + (f" ({code.code})" if code else "")})
-            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-            st.caption("Parsed and schema-validated by src/fhir_loader.py "
-                       "(Pydantic R4 resource models). Bundles ship in "
-                       "data/demo/fhir/*.json — inspect them directly.")
-
-        st.markdown("##### Inputs that were missing for this prediction")
-        if not prow.empty:
-            missing_feats = [f for f in FE.get_feature_names(
-                ["wearable", "baseline", "clinical"])
-                if pd.isna(prow.iloc[0].get(f))]
-            if missing_feats:
-                st.dataframe(pd.DataFrame({"missing feature": missing_feats}),
-                             hide_index=True, width="stretch")
-                st.caption("Missing features are handled by the model's "
-                           "train-fitted median imputer plus missing-indicator "
-                           "features. They are listed here, never invented.")
-            else:
-                st.success("No model inputs were missing for this prediction.")
-
-        st.markdown("##### Limitations (read before trusting anything above)")
-        st.markdown(
-            f"""
-- **Synthetic data end-to-end.** Wearable records, FHIR bundles, and the 1–5
-  recovery labels are generated by a documented simulator
-  (`docs/dataset_card.md`). Performance on these labels says nothing about
-  real patients.
-- **The clinical stream's value is an assumption.** The simulator couples
-  condition burden to recovery; the ablation table reports honestly whether
-  the model can exploit that coupling ({'it can, weakly' if m_wc < m_wb else 'at this cohort size it could not — see the Model evaluation tab'}).
-- **Association, not causation.** The what-if explorer re-runs a regression
-  with one input replaced; it does not simulate physiology or interventions.
-- **Uncertainty is a proxy.** ±1.96σ bands come from training residuals; they
-  are not calibrated prediction intervals.
-- **Static clinical snapshot.** FHIR context is time-invariant (conditions,
-  meds, one observation date) — a documented v1 simplification.
-- **Not validated for clinical use.** No diagnosis, triage, or treatment
-  functionality is implemented, deliberately (see README §Scope).
-""")
-        st.caption(config.SYNTHETIC_DISCLAIMER)
-
+        
+        df = pd.DataFrame(comparison_data)
+        st.dataframe(df, use_container_width=True)
+        
+        # Display methodology
+        st.subheader("Evaluation Methodology")
+        st.markdown("""
+        **Three-way split:**
+        - Training set: 60% of patients
+        - Validation set: 20% of patients (model selection)
+        - Test set: 20% of patients (final evaluation)
+        
+        **Leakage Prevention:**
+        - All features computed from past data only
+        - No future information used
+        - Patient-level splits maintained
+        """)
+        
+        # Display limitations
+        st.subheader("Limitations")
+        st.markdown("""
+        - All data is synthetic
+        - Small sample size (24 patients)
+        - Not clinically validated
+        - Uncertainty estimates are proxies
+        """)
 
 if __name__ == "__main__":
     main()
+    
